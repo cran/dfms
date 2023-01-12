@@ -1,7 +1,14 @@
 # **dfms**: Dynamic Factor Models for R
 <!-- badges: start -->
+[![Status at rOpenSci Software Peer Review](https://badges.ropensci.org/556_status.svg)](https://github.com/ropensci/software-review/issues/556)
 [![R-CMD-check](https://github.com/SebKrantz/dfms/workflows/R-CMD-check/badge.svg)](https://github.com/SebKrantz/dfms/actions)
+[![CRAN status](https://www.r-pkg.org/badges/version/dfms)](https://cran.r-project.org/package=dfms) 
+[![cran checks](https://badges.cranchecks.info/worst/dfms.svg)](https://cran.r-project.org/web/checks/check_results_dfms.html)
+![downloads per month](http://cranlogs.r-pkg.org/badges/dfms?color=blue)
+![downloads](http://cranlogs.r-pkg.org/badges/grand-total/dfms?color=blue)
 [![Codecov test coverage](https://codecov.io/gh/SebKrantz/dfms/branch/main/graph/badge.svg)](https://app.codecov.io/gh/SebKrantz/dfms?branch=main)
+[![minimal R version](https://img.shields.io/badge/R%3E%3D-3.3.0-6666ff.svg)](https://cran.r-project.org/)
+[![status](https://tinyverse.netlify.com/badge/dfms)](https://CRAN.R-project.org/package=dfms)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 <!-- badges: end -->
 
@@ -13,11 +20,11 @@ The package is fully functional though, and you are very welcome to install it u
 
 *dfms* provides efficient estimation of Dynamic Factor Models via the EM Algorithm. Estimation can be done in 3 different ways following:
 
-- Doz, C., Giannone, D., & Reichlin, L. (2011). A two-step estimator for large approximate dynamic factor models based on Kalman filtering. *Journal of Econometrics, 164*(1), 188-205.
+- Doz, C., Giannone, D., & Reichlin, L. (2011). A two-step estimator for large approximate dynamic factor models based on Kalman filtering. *Journal of Econometrics, 164*(1), 188-205. <doi:10.1016/j.jeconom.2011.02.012> 
 
-- Doz, C., Giannone, D., & Reichlin, L. (2012). A quasi-maximum likelihood approach for large, approximate dynamic factor models. *Review of economics and statistics, 94*(4), 1014-1024.
+- Doz, C., Giannone, D., & Reichlin, L. (2012). A quasi-maximum likelihood approach for large, approximate dynamic factor models. *Review of economics and statistics, 94*(4), 1014-1024. <doi:10.1162/REST_a_00225>
 
-- Banbura, M., & Modugno, M. (2014). Maximum likelihood estimation of factor models on datasets with arbitrary pattern of missing data. *Journal of Applied Econometrics, 29*(1), 133-160.
+- Banbura, M., & Modugno, M. (2014). Maximum likelihood estimation of factor models on datasets with arbitrary pattern of missing data. *Journal of Applied Econometrics, 29*(1), 133-160. <doi:10.1002/jae.2306>
 
 The default is `em.method = "auto"`, which chooses `"DGR"` following Doz, Giannone & Reichlin (2012) if there are no missing values in the data, and `"BM"` following Banbura & Modugno (2014) with missing data. Using `em.method = "none"` generates Two-Step estimates following Doz, Giannone & Reichlin (2011). This is extremely efficient on bigger datasets. PCA and Two-Step estimates are also reported in EM based methods. 
 
