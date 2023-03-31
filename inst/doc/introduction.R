@@ -85,19 +85,19 @@ plot(fc, xlim = c(320, 370))
 # Factor forecasts in wide format
 head(as.data.frame(fc, pivot = "wide"))
 
-## -----------------------------------------------------------------------------
-# Quarterly series from BM14
-head(BM14_Q, 3)
-# Pre-processing the data
-BM14_Q[, BM14_Models[BM14_Models$freq == "Q", ]$log_trans] %<>% log()
-BM14_Q_diff = diff(BM14_Q)
-# Merging to monthly data and duplicating 2 times
-BM14_diff = cbind(BM14_M_diff, BM14_Q_diff, BM14_Q_diff, BM14_Q_diff)
-
-# Estimating the model with 5 factors and 3 lags using BM14's EM algorithm
-model2 = DFM(BM14_diff, r = 5, p = 3)
-print(model2)
-plot(model2)
+## ---- eval = FALSE, include=FALSE---------------------------------------------
+#  # Quarterly series from BM14
+#  head(BM14_Q, 3)
+#  # Pre-processing the data
+#  BM14_Q[, BM14_Models[BM14_Models$freq == "Q", ]$log_trans] %<>% log()
+#  BM14_Q_diff = diff(BM14_Q)
+#  # Merging to monthly data and duplicating 2 times
+#  BM14_diff = cbind(BM14_M_diff, BM14_Q_diff, BM14_Q_diff, BM14_Q_diff)
+#  
+#  # Estimating the model with 5 factors and 3 lags using BM14's EM algorithm
+#  model2 = DFM(BM14_diff, r = 5, p = 3)
+#  print(model2)
+#  plot(model2)
 
 ## ---- include=FALSE-----------------------------------------------------------
 options(opt)

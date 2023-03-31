@@ -21,6 +21,7 @@ print.dfm <- function(x, digits = 4L, ...) {
   p <- dim(A)[2L]/r
   cat("Dynamic Factor Model: n = ", dim(X)[2L], ", T = ", dim(X)[1L], ", r = ", r, ", p = ", p, ", %NA = ",
       if(x$anyNA) round(sum(attr(X, "missing"))/prod(dim(X))*100, digits) else 0,"\n", sep = "")
+  if(length(x$rho)) cat("   with AR(1) errors: mean(abs(rho)) =", round(mean(abs(x$rho)), 3), "\n")
   fnam <- paste0("f", seq_len(r))
   cat("\nFactor Transition Matrix [A]\n")
   print(round(A, digits))
@@ -41,15 +42,17 @@ summary.dfm <- function(object, method = switch(object$em.method, none = "2s", "
   r <- dim(A)[1L]
   p <- dim(A)[2L] / r
   C <- object$C
-  res <- X - tcrossprod(Fa, C)
+  idio_ar1 <- !is.null(object$rho)
+  res <- if(idio_ar1) object[["e"]] else  X - tcrossprod(Fa, C)
   anymissing <- object$anyNA
-  if(anymissing) res[attr(X, "missing")] <- NA
-  rescov <- pwcov(res, use = if(anymissing) "pairwise.complete.obs" else "everything", P = TRUE)
-  ACF <- AC1(res, anymissing)
+  if(!idio_ar1 && anymissing) res[attr(X, "missing")] <- NA
+  rescov <- pwcov(res, use = if(!idio_ar1 && anymissing) "pairwise.complete.obs" else "everything", P = TRUE)
+  ACF <- if(idio_ar1) object$rho else AC1(res, anymissing)
   R2 <- 1 - diag(rescov[,, 1L])
   summ <- list(info = c(n = dim(X)[2L], T = dim(X)[1L], r = r, p = p,
                         `%NA` = if(anymissing) sum(attr(X, "missing")) / prod(dim(X)) * 100 else 0),
                call = object$call,
+               idio_ar1 = idio_ar1,
                F_stats = msum(Fa),
                A = A,
                F_cov = pwcov(Fa, P = TRUE),
@@ -82,6 +85,7 @@ print.dfm_summary <- function(x,
   inf <- as.integer(x$info[1:4])
   cat("Dynamic Factor Model: n = ", inf[1L], ", T = ", inf[2L], ", r = ", inf[3L], ", p = ", inf[4L],
       ", %NA = ", round(x$info[5L], digits), "\n", sep = "")
+  if(length(x$idio_ar1)) cat("   with AR(1) errors: mean(abs(rho)) =", round(mean(abs(x$res_ACF)), 3), "\n")
   cat("\nCall: ", deparse(x$call))
   # cat("\nModel: ", ))
   cat("\n\nSummary Statistics of Factors [F]\n")
@@ -305,6 +309,7 @@ as.data.frame.dfm <- function(x, ...,
 #' @param method character. The factor estimates to use: one of \code{"qml"}, \code{"2s"} or \code{"pca"}.
 #' @param orig.format logical. \code{TRUE} returns residuals/fitted values in a data format similar to \code{X}.
 #' @param standardized logical. \code{FALSE} will put residuals/fitted values on the original data scale.
+#' @param na.keep logical. \code{TRUE} inserts missing values where \code{X} is missing (default \code{TRUE} as residuals/fitted values are only defined for observed data). \code{FALSE} returns the raw prediction, which can be used to interpolate data based on the DFM. For residuals, \code{FALSE} returns the difference between the prediction and the initial imputed version of \code{X} use for PCA to initialize the Kalman Filter.
 #' @param \dots not used.
 #'
 #' @return A matrix of DFM residuals or fitted values. If \code{orig.format = TRUE} the format may be different, e.g. a data frame.
@@ -328,18 +333,21 @@ as.data.frame.dfm <- function(x, ...,
 residuals.dfm <- function(object,
                           method = switch(object$em.method, none = "2s", "qml"),
                           orig.format = FALSE,
-                          standardized = FALSE, ...) {
+                          standardized = FALSE,
+                          na.keep = TRUE, ...) {
   X <- object$X_imp
   Fa <- switch(tolower(method),
               pca = object$F_pca, `2s` = object$F_2s, qml = object$F_qml,
               stop("Unkown method", method))
-  X_pred <- tcrossprod(Fa, object$C)
-  if(!standardized) {
-    stats <- attr(X, "stats")
-    X_pred <- unscale(X_pred, stats)
-    res <- unscale(X, stats) - X_pred
-  } else res <- X - X_pred
-  if(object$anyNA) res[attr(X, "missing")] <- NA
+  if(!(standardized && length(object[["e"]]))) {
+    X_pred <- tcrossprod(Fa, object$C)
+    if(!standardized) {  # TODO: What if AR(1) resid available?
+      stats <- attr(X, "stats")
+      X_pred <- unscale(X_pred, stats)
+      res <- unscale(X, stats) - X_pred
+    } else res <- X - X_pred
+  } else res <- object[["e"]]
+  if(na.keep && object$anyNA) res[attr(X, "missing")] <- NA
   if(orig.format) {
     if(length(object$rm.rows)) res <- pad(res, object$rm.rows, method = "vpos")
     if(attr(X, "is.list")) res <- mctl(res)
@@ -353,14 +361,15 @@ residuals.dfm <- function(object,
 fitted.dfm <- function(object,
                        method = switch(object$em.method, none = "2s", "qml"),
                        orig.format = FALSE,
-                       standardized = FALSE, ...) {
+                       standardized = FALSE,
+                       na.keep = TRUE, ...) {
   X <- object$X_imp
   Fa <- switch(tolower(method),
               pca = object$F_pca, `2s` = object$F_2s, qml = object$F_qml,
               stop("Unkown method", method))
   res <- tcrossprod(Fa, object$C)
   if(!standardized) res <- unscale(res, attr(X, "stats"))
-  if(object$anyNA) res[attr(X, "missing")] <- NA
+  if(na.keep && object$anyNA) res[attr(X, "missing")] <- NA
   if(orig.format) {
     if(length(object$rm.rows)) res <- pad(res, object$rm.rows, method = "vpos")
     if(attr(X, "is.list")) res <- mctl(res)
@@ -463,16 +472,24 @@ predict.dfm <- function(object,
   }
 
   # Additional univariate forecasting of the residuals?
-  if(!is.null(resFUN)) { # TODO: What about missing values??
+  fcr <- NULL
+  if(!is.null(resFUN)) {
     if(!is.function(resFUN)) stop("resFUN needs to be a forecasting function with second argument h that produces a numeric h-step ahead forecast of a univariate time series")
     # If X is a multivariate time series object for which the univariate forecasting function could have methods.
     ofl <- !attr(X, "is.list") && length(attr(X, "attributes")[["class"]])
-    rsid <- residuals(object, method, orig.format = ofl, standardized = TRUE)
+    rsid <- residuals(object, method, orig.format = ofl, standardized = TRUE, na.keep = FALSE) # TODO: What about missing values??
     if(ofl && length(object$rm.rows)) rsid <- rsid[-object$rm.rows, , drop = FALSE]
     ACF <- AC1(rsid, object$anyNA)
     fcr <- which(abs(ACF) >= abs(resAC)) # TODO: Check length of forecast??
     for (i in fcr) X_fc[, i] <- X_fc[, i] + as.numeric(resFUN(rsid[, i], h, ...))
-  } else fcr <- NULL
+  } else if(!is.null(res <- object[["e"]])) {
+    rho <- object$rho
+    last_res <- res[nrow(res), ]
+    for (i in seq_len(h)) {
+      last_res <- last_res * rho
+      X_fc[i, ] <- X_fc[i, ] + last_res
+    }
+  }
 
   if(!standardized) { # Unstandardize factors with the average mean and SD??
     stats <- attr(X, "stats")
@@ -719,7 +736,7 @@ as.data.frame.dfm_forecast <- function(x, ...,
 ICr <- function(X, max.r = min(20, ncol(X)-1)) {
 
   # Converting to matrix and standardizing
-  X <- fscale(qM(X))
+  X <- fscale(qM(X), na.rm = TRUE)
   dimnames(X) <- NULL
 
   if(anyNA(X)) {
