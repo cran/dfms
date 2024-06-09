@@ -1,5 +1,5 @@
 Package: dfms
-Version: 0.2.1
+Version: 0.2.2
 Title: Dynamic Factor Models
 Authors@R: c(person("Sebastian", "Krantz", role = c("aut", "cre"), email = "sebastian.krantz@graduateinstitute.ch"),
              person("Rytis", "Bagdziunas", role = "aut"))
@@ -23,13 +23,13 @@ Suggests: xts, vars, magrittr, testthat (>= 3.0.0), knitr, rmarkdown,
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 NeedsCompilation: yes
-Packaged: 2023-04-01 08:52:17 UTC; sebastiankrantz
+Packaged: 2024-06-09 14:50:50 UTC; sebastiankrantz
 Author: Sebastian Krantz [aut, cre],
   Rytis Bagdziunas [aut]
 Maintainer: Sebastian Krantz <sebastian.krantz@graduateinstitute.ch>
 Repository: CRAN
-Date/Publication: 2023-04-03 11:00:02 UTC
+Date/Publication: 2024-06-09 18:20:02 UTC

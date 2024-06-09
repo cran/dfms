@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
   collapse = TRUE,
   cache = TRUE,
@@ -85,7 +85,7 @@ plot(fc, xlim = c(320, 370))
 # Factor forecasts in wide format
 head(as.data.frame(fc, pivot = "wide"))
 
-## ---- eval = FALSE, include=FALSE---------------------------------------------
+## ----eval = FALSE, include=FALSE----------------------------------------------
 #  # Quarterly series from BM14
 #  head(BM14_Q, 3)
 #  # Pre-processing the data
@@ -99,6 +99,6 @@ head(as.data.frame(fc, pivot = "wide"))
 #  print(model2)
 #  plot(model2)
 
-## ---- include=FALSE-----------------------------------------------------------
+## ----include=FALSE------------------------------------------------------------
 options(opt)
 
