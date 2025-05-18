@@ -30,11 +30,11 @@ BM14_Models_M <- subset(BM14_Models, freq == "M")
 library(magrittr)
 # log-transforming and first-differencing the data
 BM14_M[, BM14_Models_M$log_trans] %<>% log()
-BM14_M_diff = diff(BM14_M)
+BM14_M_diff <- diff(BM14_M)
 plot(scale(BM14_M_diff), lwd = 1)
 
 ## -----------------------------------------------------------------------------
-ic = ICr(BM14_M_diff)
+ic <- ICr(BM14_M_diff)
 print(ic)
 plot(ic)
 
@@ -47,12 +47,12 @@ vars::VARselect(ic$F_pca[, 1:4])
 
 ## -----------------------------------------------------------------------------
 # Estimating the model with 4 factors and 3 lags using BM14's EM algorithm
-model1 = DFM(BM14_M_diff, r = 4, p = 3)
-print(model1)
-plot(model1)
+model_m <- DFM(BM14_M_diff, r = 4, p = 3)
+print(model_m)
+plot(model_m)
 
 ## -----------------------------------------------------------------------------
-dfm_summary <- summary(model1)
+dfm_summary <- summary(model_m)
 print(dfm_summary) # Large model with > 40 series: defaults to compact = 2
 
 # Can request more detailed printouts
@@ -60,44 +60,42 @@ print(dfm_summary) # Large model with > 40 series: defaults to compact = 2
 # print(dfm_summary, compact = 0) 
 
 ## -----------------------------------------------------------------------------
-plot(resid(model1, orig.format = TRUE))
-plot(fitted(model1, orig.format = TRUE))
+plot(resid(model_m, orig.format = TRUE), lwd = 1)
+plot(fitted(model_m, orig.format = TRUE), lwd = 1)
 
 ## -----------------------------------------------------------------------------
-plot(model1, method = "all", type = "individual")
+plot(model_m, method = "all", type = "individual")
 
 ## -----------------------------------------------------------------------------
 # Default: all estimates in long format
-head(as.data.frame(model1, time = index(BM14_M_diff)))
+head(as.data.frame(model_m, time = index(BM14_M_diff)))
 
 ## -----------------------------------------------------------------------------
 # 12-period ahead DFM forecast
-fc = predict(model1, h = 12)
+fc <- predict(model_m, h = 12)
 print(fc)
 
 ## -----------------------------------------------------------------------------
 # Setting an appropriate plot range to see the forecast
 plot(fc, xlim = c(320, 370))
-# Predicting with Two-Step estimates
-# plot(predict(model1, h = 12, method = "2s"), xlim = c(320, 370))
 
 ## -----------------------------------------------------------------------------
 # Factor forecasts in wide format
 head(as.data.frame(fc, pivot = "wide"))
 
-## ----eval = FALSE, include=FALSE----------------------------------------------
-#  # Quarterly series from BM14
-#  head(BM14_Q, 3)
-#  # Pre-processing the data
-#  BM14_Q[, BM14_Models[BM14_Models$freq == "Q", ]$log_trans] %<>% log()
-#  BM14_Q_diff = diff(BM14_Q)
-#  # Merging to monthly data and duplicating 2 times
-#  BM14_diff = cbind(BM14_M_diff, BM14_Q_diff, BM14_Q_diff, BM14_Q_diff)
-#  
-#  # Estimating the model with 5 factors and 3 lags using BM14's EM algorithm
-#  model2 = DFM(BM14_diff, r = 5, p = 3)
-#  print(model2)
-#  plot(model2)
+## -----------------------------------------------------------------------------
+# Quarterly series from BM14
+head(BM14_Q, 3)
+# Pre-processing the data
+BM14_Q[, BM14_Models$log_trans[BM14_Models$freq == "Q"]] %<>% log()
+BM14_Q_diff <- diff(BM14_Q)
+# Merging to monthly data
+BM14_diff <- merge(BM14_M_diff, BM14_Q_diff)
+
+# Estimating the model with 5 factors and 3 lags using BM14's EM algorithm
+model_mq <- DFM(BM14_diff, r = 5, p = 3, quarterly.vars = colnames(BM14_Q))
+print(model_mq)
+plot(model_mq)
 
 ## ----include=FALSE------------------------------------------------------------
 options(opt)

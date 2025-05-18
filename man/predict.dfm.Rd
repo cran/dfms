@@ -58,7 +58,7 @@
 \item{standardized}{logical. \code{FALSE} will return data forecasts on the original scale.}
 
 \item{resFUN}{an (optional) function to compute a univariate forecast of the residuals.
-The function needs to have a second argument providing the forecast horizon (\code{h}) and return a vector or forecasts. See Examples.}
+The function needs to have a second argument providing the forecast horizon (\code{h}) and return a vector of forecasts. See Examples.}
 
 \item{resAC}{numeric. Threshold for residual autocorrelation to apply \code{resFUN}: only residual series where AC1 > resAC will be forecasted.}
 
@@ -127,16 +127,16 @@ library(xts)
 library(collapse)
 
 # Fit DFM with 3 factors and 3 lags in the transition equation
-mod = DFM(diff(BM14_M), r = 3, p = 3)
+mod <- DFM(diff(BM14_M), r = 3, p = 3)
 
 # 15 period ahead forecast
-fc = predict(mod, h = 15)
+fc <- predict(mod, h = 15)
 print(fc)
 plot(fc, xlim = c(300, 370))
 
 # Also forecasting autocorrelated residuals with an AR(1)
 fcfun <- function(x, h) predict(ar(na_rm(x)), n.ahead = h)$pred
-fcar = predict(mod, resFUN = fcfun, h = 15)
+fcar <- predict(mod, resFUN = fcfun, h = 15)
 plot(fcar, xlim = c(300, 370))
 
 # Retrieving a data frame of the forecasts
@@ -144,4 +144,7 @@ head(as.data.frame(fcar, pivot = "wide")) # Factors
 head(as.data.frame(fcar, use = "data"))   # Data
 head(as.data.frame(fcar, use = "both"))   # Both
 }
+}
+\seealso{
+\link{dfms-package}
 }

@@ -59,7 +59,7 @@ To determine the number of lags (\code{p}) in the factor transition equation, us
 library(xts)
 library(vars)
 
-ics = ICr(diff(BM14_M))
+ics <- ICr(diff(BM14_M))
 print(ics)
 plot(ics)
 screeplot(ics)
@@ -69,9 +69,12 @@ VARselect(ics$F_pca[, 1:6])
 
 }
 \references{
-Bai, J., Ng, S. (2002). Determining the Number of Factors in Approximate Factor Models. \emph{Econometrica, 70}(1), 191-221. \doi{10.1111/1468-0262.00273}
+Bai, J., Ng, S. (2002). Determining the Number of Factors in Approximate Factor Models. \emph{Econometrica, 70}(1), 191-221. https://doi.org/10.1111/1468-0262.00273.
 
 Onatski, A. (2010). Determining the number of factors from empirical distribution of eigenvalues. \emph{The Review of Economics and Statistics, 92}(4), 1004-1016.
 
 De Valk, S., de Mattos, D., & Ferreira, P. (2019). Nowcasting: An R package for predicting economic variables using dynamic factor models. \emph{The R Journal, 11}(1), 230-244.
+}
+\seealso{
+\link{dfms-package}
 }

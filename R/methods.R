@@ -1,3 +1,41 @@
+#' @srrstats {TS2.5} *Incorporate a system to ensure that both row and column orders follow the same ordering as the underlying time series data. This may, for example, be done by including the `index` attribute of the time series data as an attribute of the auto-covariance matrix.*
+#' @srrstats {TS2.6} *Where applicable, auto-covariance matrices should also include specification of appropriate units.*
+#' @srrstats {TS3.0} *Provide tests to demonstrate at least one case in which errors widen appropriately with forecast horizon.*
+#' @srrstats {TS3.1} *If possible, provide at least one test which violates TS3.0*
+#' -> currently I don't forecast the covariance matrices. This could be implemented in the future.
+#' @srrstats {TS3.2} *Document the general drivers of forecast errors or horizons, as demonstrated via the particular cases of TS3.0 and TS3.1*
+#' @srrstats {TS3.3} *Either:*
+#' @srrstats {TS3.3a} *Document, preferable via an example, how to trim forecast values based on a specified error margin or equivalent; or*
+#' @srrstats {TS3.3b} *Provide an explicit mechanism to trim forecast values to a specified error margin, either via an explicit post-processing function, or via an input parameter to a primary analytic function.*
+#' @srrstats {TS4.0} *Return values should either:*
+#' @srrstats {TS4.0a} *Be in same class as input data, for example by using the [`tsbox` package](https://www.tsbox.help/) to re-convert from standard internal format (see 1.4, above); or*
+#' @srrstats {TS4.0b} *Be in a unique, preferably class-defined, format.*
+#' @srrstats {TS4.1} *Any units included as attributes of input data should also be included within return values.*
+#' @srrstats {TS4.2} *The type and class of all return values should be explicitly documented.*
+#' @srrstats {TS4.3} *Return values should explicitly include all appropriate units and/or time scales*
+#' @srrstats {TS4.4} *Document the effect of any such transformations on forecast data, including potential effects on both first- and second-order estimates.*
+#' @srrstats {TS4.5} *In decreasing order of preference, either:*
+#' @srrstats {TS4.5a} *Provide explicit routines or options to back-transform data commensurate with original, non-stationary input data*
+#' @srrstats {TS4.5b} *Demonstrate how data may be back-transformed to a form commensurate with original, non-stationary input data.*
+#' @srrstats {TS4.5c} *Document associated limitations on forecast values*
+#' @srrstats {TS4.6} *Time Series Software which implements or otherwise enables forecasting should return either:*
+#' @srrstats {TS4.6a} *A distribution object, for example via one of the many packages described in the CRAN Task View on [Probability Distributions](https://cran.r-project.org/web/views/Distributions.html) (or the new [`distributional` package](https://pkg.mitchelloharawild.com/distributional/) as used in the [`fable` package](https://fable.tidyverts.org) for time-series forecasting).*
+#' @srrstats {TS4.6b} *For each variable to be forecast, predicted values equivalent to first- and second-order moments (for example, mean and standard error values).*
+#' @srrstats {TS4.6c} *Some more general indication of error associated with forecast estimates.*
+#' @srrstats {TS4.7} *Ensure that forecast (modelled) values are clearly distinguished from observed (model or input) values, either (in this case in no order of preference) by*
+#' @srrstats {TS4.7a} *Returning forecast values alone*
+#' @srrstats {TS4.7b} *Returning distinct list items for model and forecast values*
+#' @srrstats {TS4.7c} *Combining model and forecast values into a single return object with an appropriate additional column clearly distinguishing the two kinds of data.*
+#' @srrstats {TS5.0} *Implement default `plot` methods for any implemented class system.*
+#' @srrstats {TS5.1} *When representing results in temporal domain(s), ensure that one axis is clearly labelled "time" (or equivalent), with continuous units.*
+#' @srrstats {TS5.2} *Default to placing the "time" (or equivalent) variable on the horizontal axis.*
+#' @srrstats {TS5.3} *Ensure that units of the time, frequency, or index variable are printed by default on the axis.*
+#' @srrstats {TS5.5} *Provide options to determine whether plots of data with missing values should generate continuous or broken lines.*
+#' @srrstats {TS5.6} *By default indicate distributional limits of forecast on plot*
+#' @srrstats {TS5.7} *By default include model (input) values in plot, as well as forecast (output) values*
+#' @srrstats {TS5.8} *By default provide clear visual distinction between model (input) values and forecast (output) values.*
+
+
 #' @name summary.dfm
 #' @aliases print.dfm
 #' @aliases summary.dfm
@@ -5,12 +43,14 @@
 #'
 #' @title DFM Summary Methods
 #'
-#' @description Summary and print methods for class 'dfm'. \code{print.dfm} just prints basic model information and the factor transition matrix \eqn{\textbf{A}}{A},
-#' \code{summary.dfm} returns all system matrices and additional residual and goodness of fit statistics - with a print method allowing full or compact printout.
+#' @description Summary and print methods for class 'dfm'. \code{print.dfm} just prints basic model information and the factor transition matrix \eqn{\textbf{A}}{A}, \code{coef.dfm} returns \eqn{\textbf{A}}{A} and \eqn{\textbf{C}}{C} in a plain list, whereas
+#' \code{summary.dfm} returns all system matrices and additional residual and goodness of fit statistics---with a print method allowing full or compact printout.
 #'
 #' @param x,object an object class 'dfm'.
 #' @param digits integer. The number of digits to print out.
 #' @param \dots not used.
+#'
+#' @seealso \link{dfms-package}
 #' @importFrom collapse qsu frange
 #' @export
 print.dfm <- function(x, digits = 4L, ...) {
@@ -19,18 +59,32 @@ print.dfm <- function(x, digits = 4L, ...) {
   A <- x$A
   r <- dim(A)[1L]
   p <- dim(A)[2L]/r
+  if(length(qv <- x$quarterly.vars)) {
+    cat("Mixed Frequency Dynamic Factor Model\nn = ", dim(X)[2L], ", nm = ", dim(X)[2L] - length(qv), ", nq = ", length(qv), ", T = ", dim(X)[1L], ", r = ", r, ", p = ", p,
+        "\n%NA = ", round(sum(attr(X, "missing"))/prod(dim(X))*100, digits), ", %NAm = ", round(sum(attr(X, "missing")[, -ckmatch(qv, colnames(X))])/(nrow(X)*(ncol(X)-length(qv)))*100, digits), "\n", sep = "")
+  } else {
   cat("Dynamic Factor Model: n = ", dim(X)[2L], ", T = ", dim(X)[1L], ", r = ", r, ", p = ", p, ", %NA = ",
       if(x$anyNA) round(sum(attr(X, "missing"))/prod(dim(X))*100, digits) else 0,"\n", sep = "")
+  }
   if(length(x$rho)) cat("   with AR(1) errors: mean(abs(rho)) =", round(mean(abs(x$rho)), 3), "\n")
   fnam <- paste0("f", seq_len(r))
   cat("\nFactor Transition Matrix [A]\n")
   print(round(A, digits))
+  return(invisible(x))
 }
+
+#' @rdname summary.dfm
+#' @export
+coef.dfm <- function(object, ...) list(A = object$A, C = object$C)
+
+#' @rdname summary.dfm
+#' @export
+logLik.dfm <- function(object, ...) object$loglik[length(object$loglik)]
 
 #' @rdname summary.dfm
 #' @param method character. The factor estimates to use: one of \code{"qml"}, \code{"2s"} or \code{"pca"}.
 #' @param \dots not used.
-#' @return Summary information following a dynamic factor model estimation.
+#' @return Summary information following a dynamic factor model estimation. \code{coef()} returns \eqn{\textbf{A}}{A} and \eqn{\textbf{C}}{C}.
 #' @importFrom stats cov
 #' @importFrom collapse pwcov
 #' @export
@@ -49,8 +103,9 @@ summary.dfm <- function(object, method = switch(object$em.method, none = "2s", "
   rescov <- pwcov(res, use = if(!idio_ar1 && anymissing) "pairwise.complete.obs" else "everything", P = TRUE)
   ACF <- if(idio_ar1) object$rho else AC1(res, anymissing)
   R2 <- 1 - diag(rescov[,, 1L])
-  summ <- list(info = c(n = dim(X)[2L], T = dim(X)[1L], r = r, p = p,
-                        `%NA` = if(anymissing) sum(attr(X, "missing")) / prod(dim(X)) * 100 else 0),
+  summ <- list(info = c(n = dim(X)[2L], T = dim(X)[1L], r = r, p = p, nq = length(object$quarterly.vars),
+                        `%NA` = if(anymissing) sum(attr(X, "missing")) / prod(dim(X)) * 100 else 0,
+                        `%NAm` = if(length(object$quarterly.vars)) sum(attr(X, "missing")[, -ckmatch(object$quarterly.vars, colnames(X))])/(nrow(X)*(ncol(X)-length(object$quarterly.vars)))*100 else NA),
                call = object$call,
                idio_ar1 = idio_ar1,
                F_stats = msum(Fa),
@@ -73,7 +128,7 @@ summary.dfm <- function(object, method = switch(object$em.method, none = "2s", "
 #' @param \dots not used.
 #'
 #' @examples
-#' mod = DFM(diff(BM14_Q), 2, 3)
+#' mod <- DFM(diff(BM14_Q), 2, 3)
 #' print(mod)
 #' summary(mod)
 #'
@@ -83,8 +138,13 @@ print.dfm_summary <- function(x,
                               compact = sum(x$info["n"] > 15, x$info["n"] > 40), ...) {
 
   inf <- as.integer(x$info[1:4])
-  cat("Dynamic Factor Model: n = ", inf[1L], ", T = ", inf[2L], ", r = ", inf[3L], ", p = ", inf[4L],
-      ", %NA = ", round(x$info[5L], digits), "\n", sep = "")
+  if(x$info["nq"] > 0) {
+    cat("Mixed Frequency Dynamic Factor Model\nn = ", inf[1L], ", nm = ", inf[1L] - x$info["nq"], ", nq = ", x$info["nq"], ", T = ", inf[2L], ", r = ", inf[3L], ", p = ", inf[4L],
+        "\n%NA = ", round(x$info["%NA"], digits), ", %NAm = ", round(x$info["%NAm"], digits), "\n", sep = "")
+  } else {
+    cat("Dynamic Factor Model: n = ", inf[1L], ", T = ", inf[2L], ", r = ", inf[3L], ", p = ", inf[4L],
+        ", %NA = ", round(x$info["%NA"], digits), "\n", sep = "")
+  }
   if(x$idio_ar1) cat("   with AR(1) errors: mean(abs(rho)) =", round(mean(abs(x$res_ACF)), 3), "\n")
   cat("\nCall: ", deparse(x$call))
   # cat("\nModel: ", ))
@@ -121,6 +181,7 @@ print.dfm_summary <- function(x,
   }
   cat("\nSummary of Individual R-Squared's\n")
   print(x$R2_stats, digits)
+  return(invisible(x))
 }
 
 
@@ -131,9 +192,10 @@ print.dfm_summary <- function(x,
 #' @param scale.factors logical. Standardize factor estimates, this usually improves the plot since the factor estimates corresponding to the greatest PCA eigenvalues tend to have a greater variance than the data.
 #' @param \dots for \code{plot.dfm}: further arguments to \code{\link{plot}}, \code{\link{ts.plot}}, or \code{\link{boxplot}}, depending on the \code{type} of plot. For \code{screeplot.dfm}: further arguments to \code{\link{screeplot.ICr}}.
 #' @returns Nothing.
+#' @seealso \link{dfms-package}
 #' @examples \donttest{
 #' # Fit DFM with 3 factors and 3 lags in the transition equation
-#' mod = DFM(diff(BM14_M), r = 3, p = 3)
+#' mod <- DFM(diff(BM14_M), r = 3, p = 3)
 #' plot(mod)
 #' plot(mod, type = "individual", method = "all")
 #' plot(mod, type = "residual")
@@ -226,18 +288,19 @@ plot.dfm <- function(x,
 #' @param \dots not used.
 #'
 #' @return A data frame of factor estimates.
+#' @seealso \link{dfms-package}
 #'
 #' @examples \donttest{
 #' library(xts)
 #' # Fit DFM with 3 factors and 3 lags in the transition equation
-#' mod = DFM(diff(BM14_M), r = 3, p = 3)
+#' mod <- DFM(diff(BM14_M), r = 3, p = 3)
 #'
 #' # Taking a single estimate:
 #' print(head(as.data.frame(mod, method = "qml")))
 #' print(head(as.data.frame(mod, method = "qml", pivot = "wide")))
 #'
 #' # Adding a proper time variable
-#' time = index(BM14_M)[-1L]
+#' time <- index(BM14_M)[-1L]
 #' print(head(as.data.frame(mod, method = "qml", time = time)))
 #'
 #' # All estimates: different pivoting methods
@@ -297,6 +360,19 @@ as.data.frame.dfm <- function(x, ...,
   return(res)
 }
 
+predict_dfm_core <- function(object, method) {
+  Fa <- switch(tolower(method),
+               pca = object$F_pca, `2s` = object$F_2s, qml = object$F_qml,
+               stop("Unkown method", method))
+  if(is.null(object$quarterly.vars)) return(tcrossprod(Fa, object$C))
+  qind <- ckmatch(object$quarterly.vars, dimnames(object$C)[[1L]])
+  res_m <- tcrossprod(Fa, object$C[-qind,, drop = FALSE])
+  Fa_lags <- flag(Fa, 0:4, fill = 0, stubs = FALSE)
+  Cq_lags <- object$C[qind, rep(1:ncol(Fa), each = 5), drop = FALSE] %r*% rep(c(1, 2, 3, 2, 1), ncol(Fa))
+  res_q <- tcrossprod(Fa_lags, Cq_lags)
+  cbind(res_m, res_q)
+}
+
 #' @name residuals.dfm
 #' @aliases residuals.dfm
 #' @aliases resid.dfm
@@ -314,10 +390,12 @@ as.data.frame.dfm <- function(x, ...,
 #'
 #' @return A matrix of DFM residuals or fitted values. If \code{orig.format = TRUE} the format may be different, e.g. a data frame.
 #'
+#' @seealso \link{dfms-package}
+#'
 #' @examples \donttest{
 #' library(xts)
 #' # Fit DFM with 3 factors and 3 lags in the transition equation
-#' mod = DFM(diff(BM14_M), r = 3, p = 3)
+#' mod <- DFM(diff(BM14_M), r = 3, p = 3)
 #'
 #' # Residuals
 #' head(resid(mod))
@@ -336,11 +414,8 @@ residuals.dfm <- function(object,
                           standardized = FALSE,
                           na.keep = TRUE, ...) {
   X <- object$X_imp
-  Fa <- switch(tolower(method),
-              pca = object$F_pca, `2s` = object$F_2s, qml = object$F_qml,
-              stop("Unkown method", method))
   if(!(standardized && length(object[["e"]]))) {
-    X_pred <- tcrossprod(Fa, object$C)
+    X_pred <- predict_dfm_core(object, method)
     if(!standardized) {  # TODO: What if AR(1) resid available?
       stats <- attr(X, "stats")
       X_pred <- unscale(X_pred, stats)
@@ -364,10 +439,7 @@ fitted.dfm <- function(object,
                        standardized = FALSE,
                        na.keep = TRUE, ...) {
   X <- object$X_imp
-  Fa <- switch(tolower(method),
-              pca = object$F_pca, `2s` = object$F_2s, qml = object$F_qml,
-              stop("Unkown method", method))
-  res <- tcrossprod(Fa, object$C)
+  res <- predict_dfm_core(object, method)
   if(!standardized) res <- unscale(res, attr(X, "stats"))
   if(na.keep && object$anyNA) res[attr(X, "missing")] <- NA
   if(orig.format) {
@@ -393,7 +465,7 @@ fitted.dfm <- function(object,
 #' @param method character. The factor estimates to use: one of \code{"qml"}, \code{"2s"} or \code{"pca"}.
 #' @param standardized logical. \code{FALSE} will return data forecasts on the original scale.
 #' @param resFUN an (optional) function to compute a univariate forecast of the residuals.
-#' The function needs to have a second argument providing the forecast horizon (\code{h}) and return a vector or forecasts. See Examples.
+#' The function needs to have a second argument providing the forecast horizon (\code{h}) and return a vector of forecasts. See Examples.
 #' @param resAC numeric. Threshold for residual autocorrelation to apply \code{resFUN}: only residual series where AC1 > resAC will be forecasted.
 #' @param \dots further arguments to \code{resFUN}.
 #'
@@ -415,21 +487,23 @@ fitted.dfm <- function(object,
 #'  \item{\code{resid.fc.ind}}{indices indicating for which variables (columns of \code{X}) the residuals were forecasted using the univariate function.}
 #'  \item{\code{call}}{call object obtained from \code{match.call()}.}
 #'
+#' @seealso \link{dfms-package}
+#'
 #' @examples \donttest{
 #' library(xts)
 #' library(collapse)
 #'
 #' # Fit DFM with 3 factors and 3 lags in the transition equation
-#' mod = DFM(diff(BM14_M), r = 3, p = 3)
+#' mod <- DFM(diff(BM14_M), r = 3, p = 3)
 #'
 #' # 15 period ahead forecast
-#' fc = predict(mod, h = 15)
+#' fc <- predict(mod, h = 15)
 #' print(fc)
 #' plot(fc, xlim = c(300, 370))
 #'
 #' # Also forecasting autocorrelated residuals with an AR(1)
 #' fcfun <- function(x, h) predict(ar(na_rm(x)), n.ahead = h)$pred
-#' fcar = predict(mod, resFUN = fcfun, h = 15)
+#' fcar <- predict(mod, resFUN = fcfun, h = 15)
 #' plot(fcar, xlim = c(300, 370))
 #'
 #' # Retrieving a data frame of the forecasts
@@ -459,16 +533,30 @@ predict.dfm <- function(object,
 
   F_fc <- matrix(NA_real_, nrow = h, ncol = nf)
   X_fc <- matrix(NA_real_, nrow = h, ncol = ny)
-  F_last <- ftail(Fa, p)   # dimnames(F_last) <- list(c("L2", "L1"), c("f1", "f2"))
-  spi <- p:1
 
   # DFM forecasting loop
-  for (i in seq_len(h)) {
-    F_reg <- ftail(F_last, p)
-    F_fc[i, ] <- tmp <- A %*% `dim<-`(t(F_reg)[, spi, drop = FALSE], NULL)
-    dim(tmp) <- NULL
-    X_fc[i, ] <- C %*% tmp
-    F_last <- rbind(F_last, tmp)
+  if(is.null(object$quarterly.vars)) {
+    F_last <- ftail(Fa, p)   # dimnames(F_last) <- list(c("L2", "L1"), c("f1", "f2"))
+    for (i in seq_len(h)) {
+      F_reg <- ftail(F_last, p)
+      F_fc[i, ] <- tmp <- A %*% vec(t(F_reg)[, p:1, drop = FALSE])
+      dim(tmp) <- NULL
+      X_fc[i, ] <- C %*% tmp
+      F_last <- rbind(F_reg, tmp)
+    }
+  } else {
+    F_last <- ftail(Fa, max(p, 5))
+    qind <- ckmatch(object$quarterly.vars, dimnames(X)[[2L]])
+    Cq_lags <- object$C[qind, rep(1:ncol(Fa), each = 5), drop = FALSE] %r*% rep(c(1, 2, 3, 2, 1), ncol(Fa))
+    # Mixed frequency forecasting loop
+    for (i in seq_len(h)) {
+      F_reg <- ftailrev(F_last, p)
+      F_fc[i, ] <- tmp <- A %*% vec(t(F_reg))
+      dim(tmp) <- NULL
+      X_fc[i, -qind] <- C[-qind,, drop = FALSE] %*% tmp
+      F_last <- rbind(F_last, tmp)
+      X_fc[i, qind] <- Cq_lags %*% vec(ftailrev(F_last, 5))
+    }
   }
 
   # Additional univariate forecasting of the residuals?
@@ -540,6 +628,7 @@ print.dfm_forecast <- function(x,
   X_fcst <- x$X_fcst
   dimnames(X_fcst)[[1L]] <- seq_len(h)
   print(round(X_fcst, digits))
+  return(invisible(x))
 }
 
 #' @rdname predict.dfm
@@ -714,11 +803,13 @@ as.data.frame.dfm_forecast <- function(x, ...,
 #'
 #' @note To determine the number of lags (\code{p}) in the factor transition equation, use the function \code{vars::VARselect} with r* principle components (also returned by \code{ICr}).
 #'
+#' @seealso \link{dfms-package}
+#'
 #' @examples
 #' library(xts)
 #' library(vars)
 #'
-#' ics = ICr(diff(BM14_M))
+#' ics <- ICr(diff(BM14_M))
 #' print(ics)
 #' plot(ics)
 #' screeplot(ics)
@@ -727,7 +818,7 @@ as.data.frame.dfm_forecast <- function(x, ...,
 #' VARselect(ics$F_pca[, 1:6])
 #'
 #' @references
-#' Bai, J., Ng, S. (2002). Determining the Number of Factors in Approximate Factor Models. \emph{Econometrica, 70}(1), 191-221. \doi{10.1111/1468-0262.00273}
+#' Bai, J., Ng, S. (2002). Determining the Number of Factors in Approximate Factor Models. \emph{Econometrica, 70}(1), 191-221. https://doi.org/10.1111/1468-0262.00273.
 #'
 #' Onatski, A. (2010). Determining the number of factors from empirical distribution of eigenvalues. \emph{The Review of Economics and Statistics, 92}(4), 1004-1016.
 #'
@@ -791,6 +882,7 @@ ICr <- function(X, max.r = min(20, ncol(X)-1)) {
 print.ICr <- function(x, ...) {
   cat("Optimal Number of Factors (r) from Bai and Ng (2002) Criteria\n\n")
   print(x$r.star)
+  return(invisible(x))
 }
 
 #' @rdname ICr
