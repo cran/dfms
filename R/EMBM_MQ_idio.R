@@ -10,6 +10,7 @@
 # p: number of lags in the state AR process.
 # i_idio: a vector of indicators specifying which variables are idiosyncratic noise variables.'
 
+# TODO: FINISH and VERIFY!!
 # Z_0 = F_0; V_0 = P_0
 EMstepBMMQidio = function(X, A, C, Q, R, Z_0, V_0, XW0, NW, dgind, dnkron, dnkron_ind, r, p, R_mat, n, nq, sr, TT, rQi, rRi) {
 
